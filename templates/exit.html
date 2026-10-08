@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicle Exit - Smart Parking Management{% endblock %}
+
+{% block page_title %}Vehicle Exit{% endblock %}
+{% block page_subtitle %}Find a parked vehicle and complete its parking session.{% endblock %}
+
+{% block content %}
+<!-- Search Form Card -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div class="card-title-box">
+      <h3>Search Parked Vehicle</h3>
+      <p>Search by license plate number to calculate parking charges</p>
+    </div>
+  </div>
+
+  <form method="GET" action="{{ url_for('exit_vehicle') }}" style="display: flex; gap: 1rem; align-items: flex-end; max-width: 650px;">
+    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+      <label for="vehicle_number" class="form-label">Vehicle Registration Number</label>
+      <input 
+        type="text" 
+        id="vehicle_number" 
+        name="vehicle_number" 
+        value="{{ query_number or '' }}" 
+        class="form-control" 
+        placeholder="Enter vehicle number (e.g. GJ01AB1234)" 
+        required 
+        style="text-transform: uppercase; font-family: monospace; letter-spacing: 0.05em; font-weight: 600;"
+      >
+    </div>
+    <button type="submit" class="btn btn-primary" style="height: 42px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <span>Search Vehicle</span>
+    </button>
+    {% if query_number %}
+      <a href="{{ url_for('exit_vehicle') }}" class="btn btn-outline" style="height: 42px;">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- ================= VEHICLE SUMMARY & BILLING PREVIEW CARD ================= -->
+{% if preview %}
+  <div class="exit-bill-card" style="max-width: 780px; margin: 0 auto 2.5rem auto;">
+    <div class="bill-header">
+      <div class="bill-badge">Active Parking Session Found</div>
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">
+        Vehicle Exit Checkout
+      </h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        Review session details and calculate automated parking fee
+      </p>
+    </div>
+
+    <div class="bill-grid">
+      <!-- Item 1: Vehicle Number -->
+      <div class="bill-item">
+        <div class="bill-item-label">Vehicle Number</div>
+        <div class="bill-item-val" style="font-family: monospace; letter-spacing: 0.05em; color: var(--primary);">
+          {{ preview.vehicle_number }}
+        </div>
+      </div>
+
+      <!-- Item 2: Owner Name -->
+      <div class="bill-item">
+        <div class="bill-item-label">Owner Name</div>
+        <div class="bill-item-val">{{ preview.owner_name }}</div>
+      </div>
+
+      <!-- Item 3: Vehicle Type -->
+      <div class="bill-item">
+        <div class="bill-item-label">Vehicle Type</div>
+        <div class="bill-item-val">
+          {% if preview.vehicle_type == 'Car' %}
+            <span class="type-badge type-car">Car (4-Wheeler)</span>
+          {% else %}
+            <span class="type-badge type-bike">Bike (2-Wheeler)</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Item 4: Assigned Slot -->
+      <div class="bill-item">
+        <div class="bill-item-label">Assigned Parking Bay</div>
+        <div class="bill-item-val">
+          <span class="slot-pill" style="font-size: 1rem; color: var(--primary);">
+            Slot {{ preview.slot_number }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Item 5: Entry Time -->
+      <div class="bill-item">
+        <div class="bill-item-label">Check-in Time</div>
+        <div class="bill-item-val" style="font-size: 0.95rem;">{{ preview.entry_time }}</div>
+      </div>
+
+      <!-- Item 6: Current Exit Time -->
+      <div class="bill-item">
+        <div class="bill-item-label">Check-out Time</div>
+        <div class="bill-item-val" style="font-size: 0.95rem;">{{ preview.current_exit_time }}</div>
+      </div>
+    </div>
+
+    <!-- Duration Banner -->
+    <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+      <div>
+        <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Calculated Duration</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-main);">
+          {{ preview.duration_hours }} Hour{% if preview.duration_hours > 1 %}s{% endif %}
+        </div>
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
+        {% if preview.vehicle_type == 'Car' %}
+          Rate: ₹30 first hour + ₹20/hr additional
+        {% else %}
+          Rate: ₹20 first hour + ₹10/hr additional
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Total Fee Banner -->
+    <div class="bill-total-banner">
+      <div>
+        <div class="bill-total-label">Total Parking Fee</div>
+        <div style="font-size: 0.8rem; color: #cbd5e1;">Slot will become immediately available</div>
+      </div>
+      <div class="bill-total-amount">₹{{ preview.fee|int }}</div>
+    </div>
+
+    <!-- Confirmation Form -->
+    <form method="POST" action="{{ url_for('exit_confirm', record_id=preview.record_id) }}" onsubmit="return confirmExit('{{ preview.vehicle_number }}', '{{ preview.slot_number }}', '{{ preview.fee|int }}');">
+      <button type="submit" class="btn btn-danger btn-block" style="padding: 0.95rem; font-size: 1rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <span>Confirm Vehicle Exit & Settle Payment</span>
+      </button>
+    </form>
+  </div>
+{% endif %}
+
+<!-- ================= LIST OF CURRENTLY PARKED VEHICLES ================= -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title-box">
+      <h3>Currently Parked Vehicles</h3>
+      <p>Quick 1-click exit from the active parking roster</p>
+    </div>
+    <span class="badge badge-parked">{{ active_records|length }} Active</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Slot</th>
+          <th>Vehicle Number</th>
+          <th>Owner Name</th>
+          <th>Type</th>
+          <th>Entry Time</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if active_records %}
+          {% for rec in active_records %}
+            <tr>
+              <td>
+                <span class="slot-pill" style="font-weight: 800; color: var(--primary);">{{ rec.slot_number }}</span>
+              </td>
+              <td>
+                <span class="vehicle-reg">{{ rec.vehicle_number }}</span>
+              </td>
+              <td>{{ rec.owner_name }}</td>
+              <td>
+                {% if rec.vehicle_type == 'Car' %}
+                  <span class="type-badge type-car">Car</span>
+                {% else %}
+                  <span class="type-badge type-bike">Bike</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 0.82rem; color: var(--text-muted);">{{ rec.entry_time }}</td>
+              <td style="text-align: right;">
+                <a href="{{ url_for('exit_vehicle', vehicle_number=rec.vehicle_number) }}" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger-border);">
+                  Select for Exit &rarr;
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>
+              </svg>
+              <h4>No vehicles are currently parked</h4>
+              <p>All 20 parking bays are vacant.</p>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

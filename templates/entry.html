@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicle Entry - Smart Parking Management{% endblock %}
+
+{% block page_title %}Vehicle Entry{% endblock %}
+{% block page_subtitle %}Register a vehicle and assign an available parking slot.{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  
+  <!-- Left Column: Registration Form Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title-box">
+        <h3>New Vehicle Registration</h3>
+        <p>Enter vehicle & driver details to auto-assign a bay</p>
+      </div>
+      <span class="system-status-badge">Fast Check-in</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('entry') }}" id="entryForm">
+      <!-- Field 1: Vehicle Number -->
+      <div class="form-group">
+        <label for="vehicle_number" class="form-label">
+          Vehicle Number <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="vehicle_number" 
+          name="vehicle_number" 
+          class="form-control" 
+          placeholder="e.g. GJ01AB1234 or MH12CD5678" 
+          required 
+          autocomplete="off"
+          style="text-transform: uppercase; font-family: monospace; letter-spacing: 0.05em; font-weight: 600;"
+        >
+        <div class="form-help">Plate number is automatically converted to uppercase.</div>
+      </div>
+
+      <!-- Field 2: Owner Name -->
+      <div class="form-group">
+        <label for="owner_name" class="form-label">
+          Owner / Driver Name <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="owner_name" 
+          name="owner_name" 
+          class="form-control" 
+          placeholder="e.g. Rahul Sharma" 
+          required 
+          autocomplete="off"
+        >
+      </div>
+
+      <!-- Field 3: Vehicle Type Selection -->
+      <div class="form-group">
+        <label class="form-label">
+          Vehicle Type <span class="required">*</span>
+        </label>
+        
+        <div class="radio-cards-grid">
+          <!-- Car Option -->
+          <label class="radio-card selected" for="type_car">
+            <input type="radio" id="type_car" name="vehicle_type" value="Car" checked>
+            <div class="radio-card-info">
+              <h4>Car / Four Wheeler</h4>
+              <p>Slots A01 - A10 (₹30 first hr)</p>
+            </div>
+          </label>
+
+          <!-- Bike Option -->
+          <label class="radio-card" for="type_bike">
+            <input type="radio" id="type_bike" name="vehicle_type" value="Bike">
+            <div class="radio-card-info">
+              <h4>Bike / Two Wheeler</h4>
+              <p>Slots B01 - B10 (₹20 first hr)</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div style="margin-top: 1.75rem;">
+        <button type="submit" class="btn btn-primary btn-block" style="padding: 0.85rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Assign Parking Slot</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Right Column: Current Availability & Guidelines -->
+  <div>
+    <!-- Availability Card -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-title-box">
+          <h3>Live Slot Availability</h3>
+          <p>Instant availability status before assigning</p>
+        </div>
+        <a href="{{ url_for('slots') }}" class="btn btn-outline btn-sm">Full Map &rarr;</a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Car Availability Pill -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-card-subtle); border-radius: var(--radius-md); border-left: 4px solid var(--primary);">
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem;">Car Slots (A01 - A10)</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              {{ slots_data.available_cars }} available out of {{ slots_data.total_car_slots }}
+            </div>
+          </div>
+          <div>
+            {% if slots_data.available_cars > 0 %}
+              <span class="badge" style="background: var(--success-light); color: var(--success); border: 1px solid var(--success-border);">
+                {{ slots_data.available_cars }} Free
+              </span>
+            {% else %}
+              <span class="badge" style="background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger-border);">
+                Full
+              </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Bike Availability Pill -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-card-subtle); border-radius: var(--radius-md); border-left: 4px solid var(--purple);">
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem;">Bike Slots (B01 - B10)</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              {{ slots_data.available_bikes }} available out of {{ slots_data.total_bike_slots }}
+            </div>
+          </div>
+          <div>
+            {% if slots_data.available_bikes > 0 %}
+              <span class="badge" style="background: var(--success-light); color: var(--success); border: 1px solid var(--success-border);">
+                {{ slots_data.available_bikes }} Free
+              </span>
+            {% else %}
+              <span class="badge" style="background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger-border);">
+                Full
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How Slot Assignment Works (Helpful for Viva) -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title-box">
+          <h3>Smart Slot Allocation Logic</h3>
+          <p>Automated first-available slot algorithm</p>
+        </div>
+      </div>
+      
+      <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem; color: var(--text-muted);">
+        <li style="display: flex; gap: 0.75rem;">
+          <span style="color: var(--primary); font-weight: 700;">1.</span>
+          <span><strong>Vehicle Validation:</strong> System checks vehicle plate syntax and verifies whether it is already actively parked.</span>
+        </li>
+        <li style="display: flex; gap: 0.75rem;">
+          <span style="color: var(--primary); font-weight: 700;">2.</span>
+          <span><strong>Category Mapping:</strong> Car vehicles query bays A01 - A10; Bike vehicles query bays B01 - B10.</span>
+        </li>
+        <li style="display: flex; gap: 0.75rem;">
+          <span style="color: var(--primary); font-weight: 700;">3.</span>
+          <span><strong>Lowest Bay Allocation:</strong> Assigns the first free sequential slot without operator intervention.</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

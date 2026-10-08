@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Parking Reports - Smart Parking Management{% endblock %}
+
+{% block page_title %}Parking Reports{% endblock %}
+{% block page_subtitle %}Simple parking performance and revenue overview.{% endblock %}
+
+{% block content %}
+<!-- ================= SECTION 1: REPORT KPI CARDS ================= -->
+<div class="kpi-grid">
+  <!-- KPI 1: Total Registered Vehicles -->
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Vehicles</span>
+      <span class="kpi-value">{{ report_stats.total_vehicles }}</span>
+      <span class="kpi-subtext">Unique vehicles recorded</span>
+    </div>
+    <div class="kpi-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2.1 10.7 2 11 2 11.3V16c0 .6.4 1 1 1h2"/>
+        <circle cx="7" cy="17" r="2"/>
+        <path d="M9 17h6"/>
+        <circle cx="17" cy="17" r="2"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- KPI 2: Completed Sessions -->
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-content">
+      <span class="kpi-label">Completed Sessions</span>
+      <span class="kpi-value">{{ report_stats.completed_sessions }}</span>
+      <span class="kpi-subtext">Successful exits settled</span>
+    </div>
+    <div class="kpi-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- KPI 3: Total Revenue -->
+  <div class="kpi-card kpi-green">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Revenue</span>
+      <span class="kpi-value">₹{{ report_stats.total_revenue|int }}</span>
+      <span class="kpi-subtext">All-time earnings collected</span>
+    </div>
+    <div class="kpi-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" x2="12" y1="2" y2="22"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- KPI 4: Average Duration -->
+  <div class="kpi-card kpi-amber">
+    <div class="kpi-content">
+      <span class="kpi-label">Avg Duration</span>
+      <span class="kpi-value">{{ report_stats.avg_duration }}h</span>
+      <span class="kpi-subtext">Average stay per vehicle</span>
+    </div>
+    <div class="kpi-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SECTION 2: ANALYTICS CHARTS ================= -->
+<div class="grid-2">
+  <!-- Chart 1: Vehicle Type Distribution -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title-box">
+        <h3>Vehicle Type Distribution</h3>
+        <p>Proportion of Cars vs Bikes parked</p>
+      </div>
+    </div>
+
+    <div style="height: 260px; position: relative; display: flex; align-items: center; justify-content: center;">
+      <canvas id="typeDistributionChart"></canvas>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; font-size: 0.85rem; font-weight: 600;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="width: 12px; height: 12px; border-radius: 3px; background-color: #2563eb;"></span>
+        <span>Cars: {{ report_stats.car_count }}</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="width: 12px; height: 12px; border-radius: 3px; background-color: #7c3aed;"></span>
+        <span>Bikes: {{ report_stats.bike_count }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: Daily Revenue Trend -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title-box">
+        <h3>Daily Revenue Trend</h3>
+        <p>Revenue collections across recent days</p>
+      </div>
+    </div>
+
+    <div style="height: 260px; position: relative;">
+      <canvas id="dailyRevenueChart"></canvas>
+    </div>
+
+    <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+      Revenue calculated from completed checkouts per calendar date.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Chart 1: Vehicle Type Distribution
+  const typeCtx = document.getElementById('typeDistributionChart');
+  if (typeCtx) {
+    const cars = {{ report_stats.car_count }};
+    const bikes = {{ report_stats.bike_count }};
+
+    new Chart(typeCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Cars (4-Wheelers)', 'Bikes (2-Wheelers)'],
+        datasets: [{
+          data: [cars, bikes],
+          backgroundColor: ['#2563eb', '#7c3aed'],
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          cutout: '65%'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  // Chart 2: Daily Revenue Bar Chart
+  const revCtx = document.getElementById('dailyRevenueChart');
+  if (revCtx) {
+    const rawData = {{ report_stats.daily_revenue|tojson }};
+    const labels = rawData.map(d => d.day);
+    const amounts = rawData.map(d => d.revenue);
+
+    new Chart(revCtx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Revenue (₹)',
+          data: amounts,
+          backgroundColor: '#3b82f6',
+          borderRadius: 6,
+          maxBarThickness: 45
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` Revenue: ₹${context.raw}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '₹' + value;
+              }
+            },
+            grid: {
+              color: '#f1f5f9'
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}
